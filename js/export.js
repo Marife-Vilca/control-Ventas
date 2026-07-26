@@ -1,4 +1,3 @@
-// Exportar la tabla visible a Excel
 function exportarExcel() {
   if (typeof XLSX === "undefined") {
     alert("La librería de Excel no se ha cargado correctamente.");
@@ -10,21 +9,22 @@ function exportarExcel() {
     return;
   }
 
-  // Mapeamos los datos organizados para la hoja de cálculo
   const datosExcel = pedidos.map((p, index) => {
     const direcciones = p.entregas
-      .map(e => `[${e.lugar}] ${e.direccion} (${e.cantidad} pcs)`)
+      .map(e => `${e.completado ? '[✓ Entregado]' : '[✗ Pendiente]'} ${e.lugar}: ${e.direccion} (${e.cantidad} pcs)`)
       .join(" | ");
+
+    const estadoGeneral = calcularEstadoGeneral(p.entregas);
 
     return {
       "ID": String(index + 1).padStart(2, '0'),
       "Cliente": p.cliente,
-      "Direcciones de Entrega": direcciones,
+      "Detalle de Entregas": direcciones,
       "Cantidad Total": p.cantidadTotal,
       "Precio Unitario": `S/ ${p.precioUnitario.toFixed(2)}`,
       "Monto Total": `S/ ${p.montoTotal.toFixed(2)}`,
-      "Estado Pedido": p.estadoPedido, // Pendiente / Entregado
-      "Estado Pago": p.estadoPago,     // Pagado / No pagado
+      "Estado Pedido": estadoGeneral, 
+      "Estado Pago": p.estadoPago,    
       "Fecha Registro": p.fecha
     };
   });
@@ -33,24 +33,21 @@ function exportarExcel() {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Chuletadas");
 
-  // Ajuste automático de ancho para las columnas
-  const max_width = datosExcel.reduce((w, r) => Math.max(w, r["Cliente"].length), 10);
   worksheet["!cols"] = [
-    { wch: 6 },  // ID
-    { wch: Math.max(max_width, 20) }, // Cliente
-    { wch: 45 }, // Direcciones
-    { wch: 12 }, // Cantidad
-    { wch: 15 }, // Precio
-    { wch: 15 }, // Monto
-    { wch: 15 }, // Estado Pedido
-    { wch: 15 }, // Estado Pago
-    { wch: 15 }  // Fecha
+    { wch: 6 },  
+    { wch: 22 },
+    { wch: 55 }, 
+    { wch: 12 }, 
+    { wch: 15 }, 
+    { wch: 15 }, 
+    { wch: 18 }, 
+    { wch: 15 }, 
+    { wch: 15 } 
   ];
 
   XLSX.writeFile(workbook, `Reporte_Chuletadas_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-// Exportar reporte estilizado a PDF
 function exportarPDF() {
   if (typeof html2pdf === "undefined") {
     alert("La librería de PDF no se ha cargado correctamente.");
@@ -62,29 +59,31 @@ function exportarPDF() {
     return;
   }
 
-  // Generamos una vista previa temporal en HTML limpia para el PDF
   const elementoPDF = document.createElement("div");
   elementoPDF.style.padding = "20px";
   elementoPDF.style.fontFamily = "Arial, sans-serif";
 
   let filasHTML = pedidos.map((p, i) => {
     const idFormateado = String(i + 1).padStart(2, '0');
-    const direccPral = p.entregas[0] ? `[${p.entregas[0].lugar}] ${p.entregas[0].direccion}` : 'Sin dirección';
+    const estadoGen = calcularEstadoGeneral(p.entregas);
+    
+    const direccResumen = p.entregas
+      .map(e => `${e.completado ? '<b>✓</b> ' : ''}[${e.lugar}] ${e.direccion}`)
+      .join('<br>');
 
     return `
-      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;">
+      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 10px;">
         <td style="padding: 6px; text-align: center;">${idFormateado}</td>
         <td style="padding: 6px;"><strong>${p.cliente}</strong></td>
-        <td style="padding: 6px; color: #475569;">${direccPral}</td>
+        <td style="padding: 6px; color: #475569;">${direccResumen}</td>
         <td style="padding: 6px; text-align: center;">${p.cantidadTotal}</td>
         <td style="padding: 6px; text-align: center; color: #1e8e3e; font-weight: bold;">S/ ${p.montoTotal.toFixed(2)}</td>
-        <td style="padding: 6px; text-align: center;">${p.estadoPedido}</td>
+        <td style="padding: 6px; text-align: center;">${estadoGen}</td>
         <td style="padding: 6px; text-align: center;">${p.estadoPago}</td>
       </tr>
     `;
   }).join('');
 
-  // Totales generales
   const totalMonto = pedidos.reduce((acc, p) => acc + p.montoTotal, 0);
   const totalCantidad = pedidos.reduce((acc, p) => acc + p.cantidadTotal, 0);
 

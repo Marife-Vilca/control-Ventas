@@ -25,6 +25,15 @@ function renderizarApp() {
   actualizarEstadisticas();
 }
 
+function calcularEstadoGeneral(entregas) {
+  if (!entregas || entregas.length === 0) return "Pendiente";
+  const completadas = entregas.filter(e => e.completado).length;
+  
+  if (completadas === 0) return "Pendiente";
+  if (completadas === entregas.length) return "Entregado";
+  return `Parcial (${completadas}/${entregas.length})`;
+}
+
 function actualizarEstadisticas() {
   let totalChuletadas = 0;
   let pendientes = 0;
@@ -37,8 +46,9 @@ function actualizarEstadisticas() {
     totalChuletadas += p.cantidadTotal;
     montoEsperado += p.montoTotal;
 
-    if (p.estadoPedido === "Pendiente") pendientes++;
-    if (p.estadoPedido === "Entregado") entregados++;
+    const est = calcularEstadoGeneral(p.entregas);
+    if (est === "Entregado") entregados++;
+    else pendientes++;
 
     if (p.estadoPago === "Pagado") {
       totalCobrado += p.montoTotal;
@@ -49,7 +59,7 @@ function actualizarEstadisticas() {
 
   document.getElementById("statTotalChuletadas").textContent = totalChuletadas;
   document.getElementById("statPendientes").textContent = pendientes;
-  document.getElementById("statVendidos").textContent = entregados; // Muestra el total de entregados
+  document.getElementById("statVendidos").textContent = entregados;
   document.getElementById("statMontoEsperado").textContent = `S/ ${montoEsperado.toFixed(2)}`;
   document.getElementById("statTotalCobrado").textContent = `S/ ${totalCobrado.toFixed(2)}`;
   document.getElementById("statPendienteCobro").textContent = `S/ ${pendienteCobro.toFixed(2)}`;
@@ -76,7 +86,13 @@ function filtrarPedidos() {
     );
     const cumpleBusqueda = cumpleCliente || cumpleDireccion;
 
-    const cumpleEstado = filterEstado === "todos" || p.estadoPedido === filterEstado;
+    const estadoGen = calcularEstadoGeneral(p.entregas);
+    let cumpleEstado = true;
+
+    if (filterEstado === "Pendiente") cumpleEstado = estadoGen === "Pendiente";
+    else if (filterEstado === "Entregado") cumpleEstado = estadoGen === "Entregado";
+    else if (filterEstado === "Parcial") cumpleEstado = estadoGen.startsWith("Parcial");
+
     const cumplePago = filterPago === "todos" || p.estadoPago === filterPago;
 
     return cumpleBusqueda && cumpleEstado && cumplePago;
@@ -86,37 +102,40 @@ function filtrarPedidos() {
   tbody.innerHTML = "";
 
   if (resultado.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4 fs-11">No hay pedidos que coincidan con la búsqueda.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4 fs-11">No hay pedidos registrados.</td></tr>`;
     return;
   }
 
   resultado.forEach((p, index) => {
     const tr = document.createElement("tr");
+    const estadoGen = calcularEstadoGeneral(p.entregas);
 
-    // Badge para Estado de Pedido (Pendiente / Entregado)
-    const badgeEstado = p.estadoPedido === "Entregado" 
-      ? `<span class="pill-badge green"><span class="dot"></span>Entregado</span>`
-      : `<span class="pill-badge yellow"><span class="dot"></span>Pendiente</span>`;
+    let badgeEstado = `<span class="pill-badge yellow"><span class="dot"></span>Pendiente</span>`;
+    if (estadoGen === "Entregado") {
+      badgeEstado = `<span class="pill-badge green"><span class="dot"></span>Entregado</span>`;
+    } else if (estadoGen.startsWith("Parcial")) {
+      badgeEstado = `<span class="pill-badge orange"><span class="dot"></span>${estadoGen}</span>`;
+    }
 
-    // Badge para Estado de Pago
     const badgePago = p.estadoPago === "Pagado"
       ? `<span class="pill-badge blue"><span class="dot"></span>Pagado</span>`
       : `<span class="pill-badge red"><span class="dot"></span>No pagado</span>`;
 
     const idFormateado = String(index + 1).padStart(2, '0');
-    const lugarPral = p.entregas[0] ? `[${p.entregas[0].lugar}] ${p.entregas[0].direccion}` : 'Sin dirección';
+    
+    const direccResumen = p.entregas.map(e => `${e.completado ? '✓ ' : ''}[${e.lugar}] ${e.direccion}`).join(' | ');
 
     tr.innerHTML = `
       <td class="ps-3 text-center text-secondary fw-500">${idFormateado}</td>
       <td><strong class="text-dark">${p.cliente}</strong></td>
-      <td class="text-secondary" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${lugarPral}</td>
+      <td class="text-secondary" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${direccResumen}">${direccResumen}</td>
       <td class="text-center"><span class="qty-box">${p.cantidadTotal}</span></td>
       <td class="text-center fw-600 green-text">S/ ${p.montoTotal.toFixed(2)}</td>
-      <td class="text-center cursor-pointer" onclick="alternarEstado('${p.id}', 'estadoPedido')">${badgeEstado}</td>
+      <td class="text-center cursor-pointer" onclick="verDetalle('${p.id}')">${badgeEstado}</td>
       <td class="text-center cursor-pointer" onclick="alternarEstado('${p.id}', 'estadoPago')">${badgePago}</td>
       <td class="pe-3 text-end">
         <div class="d-inline-flex gap-1">
-          <button class="btn-action-icon" style="background:#f0f9ff; color:#0284c7;" onclick="verDetalle('${p.id}')" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
+          <button class="btn-action-icon" style="background:#f0f9ff; color:#0284c7;" onclick="verDetalle('${p.id}')" title="Gestionar Entregas"><i class="fa-solid fa-list-check"></i></button>
           <button class="btn-action-icon" style="background:#fefce8; color:#ca8a04;" onclick="editarPedido('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
           <button class="btn-action-icon" onclick="eliminarPedido('${p.id}')" title="Eliminar"><i class="fa-solid fa-minus"></i></button>
         </div>
@@ -126,17 +145,23 @@ function filtrarPedidos() {
   });
 }
 
-// Cambia el estado de Pendiente a Entregado y de No pagado a Pagado al hacer clic
 function alternarEstado(id, campo) {
   const p = pedidos.find(item => item.id === id);
   if (p) {
-    if (campo === 'estadoPedido') {
-      p.estadoPedido = p.estadoPedido === 'Pendiente' ? 'Entregado' : 'Pendiente';
-    } else {
+    if (campo === 'estadoPago') {
       p.estadoPago = p.estadoPago === 'No pagado' ? 'Pagado' : 'No pagado';
+      guardarLocalStorage();
+      mostrarToast("Estado de pago actualizado");
     }
+  }
+}
+
+function alternarEntregaEspecifica(pedidoId, entregaIndex) {
+  const p = pedidos.find(item => item.id === pedidoId);
+  if (p && p.entregas[entregaIndex]) {
+    p.entregas[entregaIndex].completado = !p.entregas[entregaIndex].completado;
     guardarLocalStorage();
-    mostrarToast("Estado actualizado correctamente");
+    verDetalle(pedidoId); 
   }
 }
 
@@ -211,7 +236,7 @@ function guardarPedido(e) {
     const direccion = f.querySelector(".direccion-input").value.trim();
     const cantidad = parseInt(f.querySelector(".cantidad-input").value) || 0;
 
-    entregas.push({ lugar, direccion, cantidad });
+    entregas.push({ lugar, direccion, cantidad, completado: false });
     cantidadTotal += cantidad;
   });
 
@@ -220,7 +245,12 @@ function guardarPedido(e) {
   if (id) {
     const index = pedidos.findIndex(p => p.id === id);
     if (index !== -1) {
-      pedidos[index] = { ...pedidos[index], cliente, precioUnitario, cantidadTotal, montoTotal, entregas };
+      const entregasActualizadas = entregas.map((nueva, idx) => {
+        const previa = pedidos[index].entregas[idx];
+        return { ...nueva, completado: previa ? previa.completado : false };
+      });
+
+      pedidos[index] = { ...pedidos[index], cliente, precioUnitario, cantidadTotal, montoTotal, entregas: entregasActualizadas };
     }
   } else {
     pedidos.push({
@@ -229,7 +259,6 @@ function guardarPedido(e) {
       precioUnitario,
       cantidadTotal,
       montoTotal,
-      estadoPedido: "Pendiente",
       estadoPago: "No pagado",
       entregas,
       fecha: new Date().toLocaleDateString("es-PE")
@@ -271,14 +300,28 @@ function verDetalle(id) {
   if (!p) return;
 
   let entregasHTML = p.entregas.map((e, index) => `
-    <div class="d-flex justify-content-between border-bottom py-1">
-      <span><strong>#${index + 1} ${e.lugar}:</strong> ${e.direccion}</span>
-      <span class="brown-text fw-600">${e.cantidad} chuletada(s)</span>
+    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+      <div>
+        <div><strong>#${index + 1} [${e.lugar}]:</strong> ${e.direccion}</div>
+        <div class="brown-text fs-10">${e.cantidad} chuletada(s)</div>
+      </div>
+      <button class="btn btn-xs ${e.completado ? 'btn-success' : 'btn-outline-secondary'}" 
+              onclick="alternarEntregaEspecifica('${p.id}', ${index})">
+        ${e.completado ? '<i class="fa-solid fa-check me-1"></i>Entregado' : 'Marcar Entregado'}
+      </button>
     </div>
   `).join('');
 
+  const estGen = calcularEstadoGeneral(p.entregas);
+
   document.getElementById("detalleBody").innerHTML = `
-    <div class="mb-2"><strong>Cliente:</strong> ${p.cliente} <span class="text-secondary">(${p.fecha})</span></div>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div><strong>Cliente:</strong> ${p.cliente}</div>
+      <span class="fs-10 text-secondary">${p.fecha}</span>
+    </div>
+    <div class="card-clay p-2 bg-light mb-2 fs-10">
+      Estado del Pedido: <strong>${estGen}</strong>
+    </div>
     <div class="my-2">${entregasHTML}</div>
     <div class="d-flex justify-content-between fw-600 fs-12 mt-2 pt-2 border-top">
       <span>Total (${p.cantidadTotal} pcs × S/${p.precioUnitario}):</span>

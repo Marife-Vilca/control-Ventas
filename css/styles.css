@@ -32,7 +32,6 @@ body {
   padding: 16px;
 }
 
-/* Header */
 .dashboard-header-wrapper {
   display: flex;
   justify-content: space-between;
@@ -70,7 +69,6 @@ body {
   margin: 10px 0 16px 0;
 }
 
-/* Tarjetas */
 .card-clay {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -108,7 +106,6 @@ body {
   line-height: 1;
 }
 
-/* Buscador sin Solapamiento con la Lupa */
 .search-box-wrapper {
   position: relative;
   display: flex;
@@ -131,7 +128,6 @@ body {
   padding-left: 32px !important;
 }
 
-/* Form Controls Delgados */
 .form-control-compact, .form-select-compact {
   width: 100%;
   font-size: 11px !important;
@@ -148,7 +144,6 @@ body {
   border-color: #94a3b8 !important;
 }
 
-/* Botones */
 .btn-brown-primary {
   background-color: var(--brown-accent);
   color: #fff;
@@ -174,7 +169,6 @@ body {
 
 .btn-xs { padding: 2px 6px; font-size: 10px; border-radius: 4px; }
 
-/* Tabla Limpia */
 .custom-clean-table {
   width: 100%;
   border-collapse: separate;
@@ -206,7 +200,6 @@ body {
   font-size: 11px;
 }
 
-/* Cuadro de Cantidad / Stock */
 .qty-box {
   display: inline-block;
   border: 1px solid var(--border-color);
@@ -218,7 +211,6 @@ body {
   text-align: center;
 }
 
-/* Badges de Estado tipo Pill */
 .pill-badge {
   display: inline-flex;
   align-items: center;
@@ -239,8 +231,8 @@ body {
 .pill-badge.green { background-color: #e6f4ea; color: #1e8e3e; }
 .pill-badge.green .dot { background-color: #1e8e3e; }
 
-.pill-badge.yellow { background-color: #fef7e0; color: #b06000; }
-.pill-badge.yellow .dot { background-color: #b06000; }
+.pill-badge.yellow { background-color: #fef7e0; color: #E1AD01; }
+.pill-badge.yellow .dot { background-color: #E1AD01; }
 
 .pill-badge.red { background-color: #fce8e6; color: #d93025; }
 .pill-badge.red .dot { background-color: #d93025; }
@@ -248,7 +240,9 @@ body {
 .pill-badge.blue { background-color: #e8f0fe; color: #1a73e8; }
 .pill-badge.blue .dot { background-color: #1a73e8; }
 
-/* Botones de Acción Rápida */
+.pill-badge.orange { background-color: #ffedd5; color: #c2410c; }
+.pill-badge.orange .dot { background-color: #c2410c; }
+
 .btn-action-icon {
   width: 26px;
   height: 26px;
@@ -268,14 +262,12 @@ body {
 
 .cursor-pointer { cursor: pointer; }
 
-/* Colores de Texto */
 .green-text { color: #1e8e3e !important; }
 .red-text { color: #d93025 !important; }
 .gold-text { color: var(--gold-accent) !important; }
 .brown-text { color: var(--brown-accent) !important; }
 .bg-brown-dark { background-color: var(--brown-dark) !important; }
 
-/* Toast */
 .toast-wrapper { position: fixed; bottom: 20px; right: 20px; z-index: 2000; }
 .toast-box {
   background: var(--brown-dark);
@@ -294,3 +286,4 @@ body {
   background-color: #fdfbf7 !important; 
   border: 1px solid #f0e6d8 !important; 
 }
+
