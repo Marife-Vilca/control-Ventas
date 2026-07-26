@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Chuletadas</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="dashboard-container">
+    
+    <!-- Encabezado -->
+    <header class="dashboard-header-wrapper mb-3">
+      <div>
+        <h1 class="admin-panel-title">Gestión de Chuletadas</h1>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-brown-primary" data-bs-toggle="modal" data-bs-target="#modalCliente" onclick="prepararNuevoPedido()">
+          <i class="fa-solid fa-plus me-1"></i>Nuevo Cliente
+        </button>
+      </div>
+    </header>
+
+    <div class="divider-line"></div>
+
+    <!-- KPIs / Tarjetas Resumen Tipo Dashboard -->
+    <section class="row g-2 mb-3">
+      <div class="col-4 col-md-2">
+        <div class="card-clay p-2 d-flex align-items-center gap-2">
+          <div class="mini-icon-bg bg-gold-light"><i class="fa-solid fa-drumstick-bite gold-text"></i></div>
+          <div>
+            <div class="card-value" id="statTotalChuletadas">0</div>
+            <div class="card-label">Chuletadas</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4 col-md-2">
+        <div class="card-clay p-2 d-flex align-items-center gap-2">
+          <div class="mini-icon-bg bg-gold-light"><i class="fa-solid fa-hourglass-half gold-text"></i></div>
+          <div>
+            <div class="card-value gold-text" id="statPendientes">0</div>
+            <div class="card-label">Pendientes</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4 col-md-2">
+        <div class="card-clay p-2 d-flex align-items-center gap-2">
+          <div class="mini-icon-bg bg-green-light"><i class="fa-solid fa-circle-check green-text"></i></div>
+          <div>
+            <div class="card-value green-text" id="statVendidos">0</div>
+            <div class="card-label">Vendidos</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4 col-md-2">
+        <div class="card-clay p-2 d-flex align-items-center gap-2">
+          <div class="mini-icon-bg bg-brown-light"><i class="fa-solid fa-coins brown-text"></i></div>
+          <div>
+            <div class="card-value brown-text" id="statMontoEsperado">S/ 0.00</div>
+            <div class="card-label">M. Esperado</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4 col-md-2">
+        <div class="card-clay p-2 d-flex align-items-center gap-2">
+          <div class="mini-icon-bg bg-green-light"><i class="fa-solid fa-money-bill-wave green-text"></i></div>
+          <div>
+            <div class="card-value green-text" id="statTotalCobrado">S/ 0.00</div>
+            <div class="card-label">Cobrado</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4 col-md-2">
+        <div class="card-clay p-2 d-flex align-items-center gap-2">
+          <div class="mini-icon-bg bg-red-light"><i class="fa-solid fa-receipt red-text"></i></div>
+          <div>
+            <div class="card-value red-text" id="statPendienteCobro">S/ 0.00</div>
+            <div class="card-label">Pend. Cobro</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Barra de Búsqueda y Filtros Delgados -->
+    <section class="card-clay p-2 mb-3">
+      <div class="row g-2 align-items-center">
+        <div class="col-12 col-md-5">
+          <div class="search-box-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" class="form-control-compact search-input" placeholder="Buscar por lugar o cliente..." oninput="filtrarPedidos()">
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <select id="filterEstado" class="form-select-compact" onchange="filtrarPedidos()">
+            <option value="todos">Todas las categorías (Estado)</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Vendido">Entregado</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <select id="filterPago" class="form-select-compact" onchange="filtrarPedidos()">
+            <option value="todos">Todos los estados (Pago)</option>
+            <option value="Pagado">Pagado</option>
+            <option value="No pagado">No pagado</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-1">
+          <button class="btn btn-outline-brown w-50" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+          <button class="btn btn-outline-brown w-50" onclick="exportarExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabla de Pedidos Identica a la Imagen -->
+    <section class="card-clay p-0 mb-3 overflow-hidden">
+      <div class="table-responsive">
+        <table class="table custom-clean-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th class="ps-3 text-center" style="width: 50px;">ID</th>
+              <th>CLIENTE</th>
+              <th>LUGAR / DIRECCIÓN</th>
+              <th class="text-center">CANT.</th>
+              <th class="text-center">TOTAL</th>
+              <th class="text-center">ESTADO</th>
+              <th class="text-center">PAGO</th>
+              <th class="pe-3 text-end">ACCIÓN RÁPIDA</th>
+            </tr>
+          </thead>
+          <tbody id="tablaPedidosBody">
+            <!-- Rellenado por JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Resumen Financiero Inferior -->
+    <section class="card-clay p-3 bg-resumen-claro">
+      <div class="card-label mb-2 text-gold">RESUMEN FINANCIERO OPERATIVO</div>
+      <div class="row g-2 fs-11">
+        <div class="col-6 col-md-2">Total Vendido: <strong id="dashTotalVendido" class="green-text d-block fs-13">S/ 0.00</strong></div>
+        <div class="col-6 col-md-2">Total Cobrado: <strong id="dashTotalCobrado" class="green-text d-block fs-13">S/ 0.00</strong></div>
+        <div class="col-6 col-md-2">Pendiente Cobro: <strong id="dashPendienteCobro" class="red-text d-block fs-13">S/ 0.00</strong></div>
+        <div class="col-6 col-md-2">Promedio / Pedido: <strong id="dashPromedio" class="gold-text d-block fs-13">S/ 0.00</strong></div>
+        <div class="col-6 col-md-2">Chuletadas Totales: <strong id="dashTotalChuletadas" class="d-block fs-13">0</strong></div>
+        <div class="col-6 col-md-2">Clientes Registrados: <strong id="dashClientes" class="d-block fs-13">0</strong></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Modal Nuevo / Editar Cliente -->
+  <div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content card-clay p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="section-lux-title m-0" id="modalClienteLabel">Nuevo Pedido</h5>
+          <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formPedido" onsubmit="guardarPedido(event)">
+          <input type="hidden" id="pedidoId">
+
+          <div class="mb-2">
+            <label class="form-label fs-11 text-secondary mb-1">Nombre del Cliente *</label>
+            <input type="text" id="clienteNombre" class="form-control-compact" required placeholder="Ej. Juan Pérez">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fs-11 text-secondary mb-1">Precio Unitario (S/)</label>
+            <input type="number" id="precioUnitario" class="form-control-compact" step="0.50" value="18.00" oninput="recalcularTotalesFormulario()">
+          </div>
+
+          <div class="divider-line my-2"></div>
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fs-11 fw-600 text-secondary">ENTREGAS MÚLTIPLES</span>
+            <button type="button" class="btn btn-xs btn-outline-brown" onclick="agregarFilaEntrega()">
+              <i class="fa-solid fa-plus me-1"></i>Agregar Lugar
+            </button>
+          </div>
+
+          <div id="contenedorEntregas" class="mb-2">
+            <!-- Entregas dinámicas -->
+          </div>
+
+          <div class="p-2 card-clay bg-light my-2">
+            <div class="d-flex justify-content-between fs-11">
+              <span>Cantidad Total: <strong id="formCantidadTotal" class="brown-text">0</strong></span>
+              <span>Monto Total: <strong id="formMontoTotal" class="green-text">S/ 0.00</strong></span>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary w-50" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-brown-primary w-50">Guardar Pedido</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle -->
+  <div class="modal fade" id="modalDetalle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content card-clay p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="section-lux-title m-0">Detalle de Entregas</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div id="detalleBody" class="fs-11"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notificación -->
+  <div class="toast-wrapper">
+    <div id="liveToast" class="toast-box d-none">
+      <span id="toastMessage" class="toast-text">Acción completada</span>
+    </div>
+  </div>
+
+  <!-- Bootstrap & Export JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <script src="js/app.js"></script>
+  <script src="js/export.js"></script>
+</body>
+</html>
