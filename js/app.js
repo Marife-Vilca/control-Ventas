@@ -25,13 +25,34 @@ function renderizarApp() {
   actualizarEstadisticas();
 }
 
-function calcularEstadoGeneral(entregas) {
+// Calcula el estado general de las ENTREGAS
+function calcularEstadoGeneralEntregas(entregas) {
   if (!entregas || entregas.length === 0) return "Pendiente";
   const completadas = entregas.filter(e => e.completado).length;
   
   if (completadas === 0) return "Pendiente";
   if (completadas === entregas.length) return "Entregado";
   return `Parcial (${completadas}/${entregas.length})`;
+}
+
+// Calcula el estado general de los PAGOS
+function calcularEstadoGeneralPagos(pedido) {
+  if (!pedido.entregas || pedido.entregas.length === 0) return { texto: "No pagado", tipo: "red", cobrado: 0 };
+
+  let montoCobrado = 0;
+  pedido.entregas.forEach(e => {
+    if (e.pagado) {
+      montoCobrado += e.cantidad * pedido.precioUnitario;
+    }
+  });
+
+  if (montoCobrado === 0) {
+    return { texto: "No pagado", tipo: "red", cobrado: 0 };
+  } else if (montoCobrado >= pedido.montoTotal) {
+    return { texto: "Pagado", tipo: "blue", cobrado: montoCobrado };
+  } else {
+    return { texto: `Parcial (S/ ${montoCobrado.toFixed(0)})`, tipo: "orange", cobrado: montoCobrado };
+  }
 }
 
 function actualizarEstadisticas() {
@@ -46,16 +67,15 @@ function actualizarEstadisticas() {
     totalChuletadas += p.cantidadTotal;
     montoEsperado += p.montoTotal;
 
-    const est = calcularEstadoGeneral(p.entregas);
-    if (est === "Entregado") entregados++;
+    const estEntregas = calcularEstadoGeneralEntregas(p.entregas);
+    if (estEntregas === "Entregado") entregados++;
     else pendientes++;
 
-    if (p.estadoPago === "Pagado") {
-      totalCobrado += p.montoTotal;
-    } else {
-      pendienteCobro += p.montoTotal;
-    }
+    const pagoInfo = calcularEstadoGeneralPagos(p);
+    totalCobrado += pagoInfo.cobrado;
   });
+
+  pendienteCobro = montoEsperado - totalCobrado;
 
   document.getElementById("statTotalChuletadas").textContent = totalChuletadas;
   document.getElementById("statPendientes").textContent = pendientes;
@@ -86,14 +106,16 @@ function filtrarPedidos() {
     );
     const cumpleBusqueda = cumpleCliente || cumpleDireccion;
 
-    const estadoGen = calcularEstadoGeneral(p.entregas);
+    const estadoEnt = calcularEstadoGeneralEntregas(p.entregas);
     let cumpleEstado = true;
+    if (filterEstado === "Pendiente") cumpleEstado = estadoEnt === "Pendiente";
+    else if (filterEstado === "Entregado") cumpleEstado = estadoEnt === "Entregado";
+    else if (filterEstado === "Parcial") cumpleEstado = estadoEnt.startsWith("Parcial");
 
-    if (filterEstado === "Pendiente") cumpleEstado = estadoGen === "Pendiente";
-    else if (filterEstado === "Entregado") cumpleEstado = estadoGen === "Entregado";
-    else if (filterEstado === "Parcial") cumpleEstado = estadoGen.startsWith("Parcial");
-
-    const cumplePago = filterPago === "todos" || p.estadoPago === filterPago;
+    const pagoInfo = calcularEstadoGeneralPagos(p);
+    let cumplePago = true;
+    if (filterPago === "Pagado") cumplePago = pagoInfo.tipo === "blue";
+    else if (filterPago === "No pagado") cumplePago = pagoInfo.tipo === "red";
 
     return cumpleBusqueda && cumpleEstado && cumplePago;
   });
@@ -108,22 +130,27 @@ function filtrarPedidos() {
 
   resultado.forEach((p, index) => {
     const tr = document.createElement("tr");
-    const estadoGen = calcularEstadoGeneral(p.entregas);
+    const estadoEnt = calcularEstadoGeneralEntregas(p.entregas);
 
+    // Badge Estado de Pedido
     let badgeEstado = `<span class="pill-badge yellow"><span class="dot"></span>Pendiente</span>`;
-    if (estadoGen === "Entregado") {
+    if (estadoEnt === "Entregado") {
       badgeEstado = `<span class="pill-badge green"><span class="dot"></span>Entregado</span>`;
-    } else if (estadoGen.startsWith("Parcial")) {
-      badgeEstado = `<span class="pill-badge orange"><span class="dot"></span>${estadoGen}</span>`;
+    } else if (estadoEnt.startsWith("Parcial")) {
+      badgeEstado = `<span class="pill-badge orange"><span class="dot"></span>${estadoEnt}</span>`;
     }
 
-    const badgePago = p.estadoPago === "Pagado"
-      ? `<span class="pill-badge blue"><span class="dot"></span>Pagado</span>`
-      : `<span class="pill-badge red"><span class="dot"></span>No pagado</span>`;
+    // Badge Estado de Pago
+    const pagoInfo = calcularEstadoGeneralPagos(p);
+    let badgePago = `<span class="pill-badge red"><span class="dot"></span>No pagado</span>`;
+    if (pagoInfo.tipo === "blue") {
+      badgePago = `<span class="pill-badge blue"><span class="dot"></span>Pagado</span>`;
+    } else if (pagoInfo.tipo === "orange") {
+      badgePago = `<span class="pill-badge orange"><span class="dot"></span>${pagoInfo.texto}</span>`;
+    }
 
     const idFormateado = String(index + 1).padStart(2, '0');
-    
-    const direccResumen = p.entregas.map(e => `${e.completado ? '✓ ' : ''}[${e.lugar}] ${e.direccion}`).join(' | ');
+    const direccResumen = p.entregas.map(e => `[${e.lugar}] ${e.direccion}`).join(' | ');
 
     tr.innerHTML = `
       <td class="ps-3 text-center text-secondary fw-500">${idFormateado}</td>
@@ -132,10 +159,10 @@ function filtrarPedidos() {
       <td class="text-center"><span class="qty-box">${p.cantidadTotal}</span></td>
       <td class="text-center fw-600 green-text">S/ ${p.montoTotal.toFixed(2)}</td>
       <td class="text-center cursor-pointer" onclick="verDetalle('${p.id}')">${badgeEstado}</td>
-      <td class="text-center cursor-pointer" onclick="alternarEstado('${p.id}', 'estadoPago')">${badgePago}</td>
+      <td class="text-center cursor-pointer" onclick="verDetalle('${p.id}')">${badgePago}</td>
       <td class="pe-3 text-end">
         <div class="d-inline-flex gap-1">
-          <button class="btn-action-icon" style="background:#f0f9ff; color:#0284c7;" onclick="verDetalle('${p.id}')" title="Gestionar Entregas"><i class="fa-solid fa-list-check"></i></button>
+          <button class="btn-action-icon" style="background:#f0f9ff; color:#0284c7;" onclick="verDetalle('${p.id}')" title="Gestionar Entregas y Pagos"><i class="fa-solid fa-list-check"></i></button>
           <button class="btn-action-icon" style="background:#fefce8; color:#ca8a04;" onclick="editarPedido('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
           <button class="btn-action-icon" onclick="eliminarPedido('${p.id}')" title="Eliminar"><i class="fa-solid fa-minus"></i></button>
         </div>
@@ -145,23 +172,23 @@ function filtrarPedidos() {
   });
 }
 
-function alternarEstado(id, campo) {
-  const p = pedidos.find(item => item.id === id);
-  if (p) {
-    if (campo === 'estadoPago') {
-      p.estadoPago = p.estadoPago === 'No pagado' ? 'Pagado' : 'No pagado';
-      guardarLocalStorage();
-      mostrarToast("Estado de pago actualizado");
-    }
-  }
-}
-
+// Cambiar estado de Entrega individual
 function alternarEntregaEspecifica(pedidoId, entregaIndex) {
   const p = pedidos.find(item => item.id === pedidoId);
   if (p && p.entregas[entregaIndex]) {
     p.entregas[entregaIndex].completado = !p.entregas[entregaIndex].completado;
     guardarLocalStorage();
-    verDetalle(pedidoId); 
+    verDetalle(pedidoId);
+  }
+}
+
+// Cambiar estado de Pago individual por dirección
+function alternarPagoEspecifico(pedidoId, entregaIndex) {
+  const p = pedidos.find(item => item.id === pedidoId);
+  if (p && p.entregas[entregaIndex]) {
+    p.entregas[entregaIndex].pagado = !p.entregas[entregaIndex].pagado;
+    guardarLocalStorage();
+    verDetalle(pedidoId);
   }
 }
 
@@ -236,7 +263,7 @@ function guardarPedido(e) {
     const direccion = f.querySelector(".direccion-input").value.trim();
     const cantidad = parseInt(f.querySelector(".cantidad-input").value) || 0;
 
-    entregas.push({ lugar, direccion, cantidad, completado: false });
+    entregas.push({ lugar, direccion, cantidad, completado: false, pagado: false });
     cantidadTotal += cantidad;
   });
 
@@ -247,7 +274,11 @@ function guardarPedido(e) {
     if (index !== -1) {
       const entregasActualizadas = entregas.map((nueva, idx) => {
         const previa = pedidos[index].entregas[idx];
-        return { ...nueva, completado: previa ? previa.completado : false };
+        return { 
+          ...nueva, 
+          completado: previa ? previa.completado : false,
+          pagado: previa ? previa.pagado : false 
+        };
       });
 
       pedidos[index] = { ...pedidos[index], cliente, precioUnitario, cantidadTotal, montoTotal, entregas: entregasActualizadas };
@@ -259,7 +290,6 @@ function guardarPedido(e) {
       precioUnitario,
       cantidadTotal,
       montoTotal,
-      estadoPago: "No pagado",
       entregas,
       fecha: new Date().toLocaleDateString("es-PE")
     });
@@ -295,37 +325,46 @@ function eliminarPedido(id) {
   }
 }
 
+// Modal de gestión detallada con switches independientes de Entrega y Pago por Dirección
 function verDetalle(id) {
   const p = pedidos.find(item => item.id === id);
   if (!p) return;
 
-  let entregasHTML = p.entregas.map((e, index) => `
-    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-      <div>
-        <div><strong>#${index + 1} [${e.lugar}]:</strong> ${e.direccion}</div>
-        <div class="brown-text fs-10">${e.cantidad} chuletada(s)</div>
+  let entregasHTML = p.entregas.map((e, index) => {
+    const subtotal = e.cantidad * p.precioUnitario;
+    return `
+      <div class="delivery-card">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <div>
+            <strong>#${index + 1} [${e.lugar}]:</strong> ${e.direccion}
+            <div class="text-secondary fs-10">${e.cantidad} chuletada(s) × S/ ${p.precioUnitario} = <strong>S/ ${subtotal.toFixed(2)}</strong></div>
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+          <button class="btn btn-xs flex-fill ${e.completado ? 'btn-success' : 'btn-outline-secondary'}" 
+                  onclick="alternarEntregaEspecifica('${p.id}', ${index})">
+            ${e.completado ? '✓ Entregado' : 'Marcar Entregado'}
+          </button>
+          <button class="btn btn-xs flex-fill ${e.pagado ? 'btn-primary' : 'btn-outline-danger'}" 
+                  onclick="alternarPagoEspecifico('${p.id}', ${index})">
+            ${e.pagado ? '✓ Pagado' : 'Marcar Pagado'}
+          </button>
+        </div>
       </div>
-      <button class="btn btn-xs ${e.completado ? 'btn-success' : 'btn-outline-secondary'}" 
-              onclick="alternarEntregaEspecifica('${p.id}', ${index})">
-        ${e.completado ? '<i class="fa-solid fa-check me-1"></i>Entregado' : 'Marcar Entregado'}
-      </button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
-  const estGen = calcularEstadoGeneral(p.entregas);
+  const pagoInfo = calcularEstadoGeneralPagos(p);
 
   document.getElementById("detalleBody").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div><strong>Cliente:</strong> ${p.cliente}</div>
       <span class="fs-10 text-secondary">${p.fecha}</span>
     </div>
-    <div class="card-clay p-2 bg-light mb-2 fs-10">
-      Estado del Pedido: <strong>${estGen}</strong>
-    </div>
     <div class="my-2">${entregasHTML}</div>
-    <div class="d-flex justify-content-between fw-600 fs-12 mt-2 pt-2 border-top">
-      <span>Total (${p.cantidadTotal} pcs × S/${p.precioUnitario}):</span>
-      <span class="green-text">S/ ${p.montoTotal.toFixed(2)}</span>
+    <div class="d-flex justify-content-between fw-600 fs-11 mt-2 pt-2 border-top">
+      <span>Cobrado: <span class="green-text">S/ ${pagoInfo.cobrado.toFixed(2)}</span></span>
+      <span>Pendiente: <span class="red-text">S/ ${(p.montoTotal - pagoInfo.cobrado).toFixed(2)}</span></span>
     </div>
   `;
   modalDetalleInstance.show();

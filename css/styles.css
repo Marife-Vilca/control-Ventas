@@ -287,3 +287,18 @@ body {
   border: 1px solid #f0e6d8 !important; 
 }
 
+.delivery-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.btn-status-toggle {
+  padding: 2px 8px;
+  font-size: 10px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+}
